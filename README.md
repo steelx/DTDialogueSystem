@@ -2,6 +2,7 @@
 A Easiest Dialogue system for Unreal Engine which uses Data Tables (@ajinkyax)
 
 HOW TO VIDEO: https://www.youtube.com/watch?v=66Xw8L9fs6M
+(Scroll to Section 3 for Setup)
 
 # DTDialogueSystem Plugin Documentation
 
@@ -74,10 +75,15 @@ Here’s how to get your characters ready for dialogue.
 Any character that can talk needs a few components.
 
 1.  **Open your NPC's Blueprint.**
+<img width="623" height="326" alt="{CFFB260A-1BF2-40AB-A810-17D1A750864A}" src="https://github.com/user-attachments/assets/7d4ad3e5-1983-45a8-9ee3-dc6fc54a5a94" />
+
 2.  **Add Components**: Click the `+ Add` button in the Components panel and add the following:
-    *   `Dialogue Component`
-    *   `Highlightable Component`
-    *   `Show Dialogue Prompt Component`
+    - A   `Dialogue Component`
+<img width="770" height="277" alt="{66B5E9D0-6E6B-443E-A4E2-23EC1E86891E}" src="https://github.com/user-attachments/assets/37d4ee69-7c48-4133-8e0a-7f380b704b9c" />
+
+    - C   `Show Dialogue Prompt Component`
+<img width="767" height="415" alt="{DAAA4028-8BEC-4190-8A78-3C68B305224B}" src="https://github.com/user-attachments/assets/15bc2f14-4a2d-4f64-9f1d-a730b57df99e" />
+
 
 3.  **Configure the Components**:
     *   **Select the `Dialogue Component`**:
@@ -123,6 +129,7 @@ The player character needs two components to initiate conversations.
     *   From the component reference, drag a wire and call the `Interact` function.
 
 Your player's input graph should look like this:
+<img width="1730" height="793" alt="{72CF3993-D271-4AE2-A921-E7DB3D617564}" src="https://github.com/user-attachments/assets/80268f6a-c59f-4943-982d-f9b7065cab69" />
 
 ```ascii
 +---------------------------+     +-----------------------------+
@@ -219,6 +226,7 @@ Now we need an object the player can pick up to get the "Facts".
 5.  Create the logic to give the player the fact when they overlap the collision box.
 
 The Blueprint graph for this is simple:
+<img width="1096" height="778" alt="{45F073A8-6733-4C77-B1E7-980AB52B3722}" src="https://github.com/user-attachments/assets/9d88c9d9-c6ba-4ad0-9fb5-469ed8922c8c" />
 
 ```ascii
 +-----------------------------+
@@ -247,6 +255,9 @@ The Blueprint graph for this is simple:
                                       | DestroyActor (Self)         |
                                       +-----------------------------+
 ```
+FactsToAdd is just variable
+<img width="722" height="603" alt="{55537202-5FFD-4262-B92A-217ABA970E54}" src="https://github.com/user-attachments/assets/02af7de4-2df5-4553-b62c-d539d1e8929b" />
+
 
 6.  Place three `BP_Apple` actors in your level. For each one, select it and go to the **Details** panel. Set the `Fact To Add` variable to `PlayerHasApple1`, `PlayerHasApple2`, and `PlayerHasApple3` respectively.
 
