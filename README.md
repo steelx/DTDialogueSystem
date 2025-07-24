@@ -2,7 +2,6 @@
 A Easiest Dialogue system for Unreal Engine which uses Data Tables (@ajinkyax)
 
 HOW TO VIDEO: https://www.youtube.com/watch?v=66Xw8L9fs6M
-(Scroll to Section 3 for Setup)
 
 # DTDialogueSystem Plugin Documentation
 
@@ -64,6 +63,8 @@ Here is the typical flow of an interaction:
 2.  The Player presses the "Interact" key (e.g., 'E'), which calls the `Interact()` function on their `InitiateDialogueComponent`.
 3.  This starts the dialogue with the focused NPC, using the global `DialogueManager` to display the UI and handle the conversation flow.
 
+> **Important Note:** A common question is: If an event fires, how does the system know which NPC to update? The `DialogueManager` tracks the participants of the **active** conversation. When an event is handled, it targets the NPC involved in that specific dialogue session, ensuring other NPCs in the world are not accidentally affected.
+
 ---
 
 ## 3. SETUP
@@ -75,41 +76,19 @@ Here’s how to get your characters ready for dialogue.
 Any character that can talk needs a few components.
 
 1.  **Open your NPC's Blueprint.**
-<img width="623" height="326" alt="{CFFB260A-1BF2-40AB-A810-17D1A750864A}" src="https://github.com/user-attachments/assets/7d4ad3e5-1983-45a8-9ee3-dc6fc54a5a94" />
-
 2.  **Add Components**: Click the `+ Add` button in the Components panel and add the following:
-    - A   `Dialogue Component`
-<img width="770" height="277" alt="{66B5E9D0-6E6B-443E-A4E2-23EC1E86891E}" src="https://github.com/user-attachments/assets/37d4ee69-7c48-4133-8e0a-7f380b704b9c" />
-
-    - C   `Show Dialogue Prompt Component`
-<img width="767" height="415" alt="{DAAA4028-8BEC-4190-8A78-3C68B305224B}" src="https://github.com/user-attachments/assets/15bc2f14-4a2d-4f64-9f1d-a730b57df99e" />
-
+    *   `Dialogue Component`
+    *   `Highlightable Component`
+    *   `Show Dialogue Prompt Component`
 
 3.  **Configure the Components**:
     *   **Select the `Dialogue Component`**:
-        *   **Participant Name**: Give the NPC a unique name (e.g., `Shopkeeper`).
+        *   **Participant Name**: Give the NPC a unique name (e.g., `NPC1` or `Hinter`).
         *   **Conditional Start Points**: This is where you'll define what dialogue the NPC starts with. We'll cover this in the example below.
     *   **Select the `Highlightable Component`**:
         *   **Outline Material / Glow Material**: Assign the `M_Outline` and `M_Glow` materials provided with the plugin. This controls how the NPC looks when highlighted.
     *   **Select the `Show Dialogue Prompt Component`**:
         *   **Tooltip Widget Class**: Assign a widget to show above the NPC's head, like the provided `WBP_MyTooltipWidget`.
-
-Your NPC's component setup should look like this:
-
-```ascii
-+-----------------------------+
-|      Components (NPC)       |
-+-----------------------------+
-|                             |
-|  > CapsuleComponent (Inherited) |
-|  > Mesh (Inherited)         |
-|      ...                  |
-|  + Dialogue Component       |
-|  + Highlightable Component  |
-|  + Show Dialogue Prompt Cmp |
-|                             |
-+-----------------------------+
-```
 
 ### 3.2. Player Setup
 
@@ -119,7 +98,7 @@ The player character needs two components to initiate conversations.
 2.  **Add Components**: Click `+ Add` and add:
     *   `Dialogue Component` (This is so the player can receive events, like "QuestUpdated").
     *   `Initiate Dialogue Component`
-> Initial Dialogue Component;s : Dialogue Trace Channel : <Must be set to what NPC is using> 
+> Initial Dialogue Component;s : Dialogue Trace Channel : <Must be set to what NPC is using>
 <img width="1742" height="1051" alt="{F43BB428-F6CF-4C83-8F54-E9FE7E8010CC}" src="https://github.com/user-attachments/assets/aaa12ec6-ecbc-4f09-bc97-8a0bdf3d4dd7" />
 
 3.  **Configure Input**:
@@ -128,147 +107,106 @@ The player character needs two components to initiate conversations.
     *   Drag a reference to the `Initiate Dialogue Component` onto the graph.
     *   From the component reference, drag a wire and call the `Interact` function.
 
-Your player's input graph should look like this:
-<img width="1730" height="793" alt="{72CF3993-D271-4AE2-A921-E7DB3D617564}" src="https://github.com/user-attachments/assets/80268f6a-c59f-4943-982d-f9b7065cab69" />
-
-```ascii
-+---------------------------+     +-----------------------------+
-|                           |     |                             |
-| (Event) IA_Interact       |-----> Get InitiateDialogueComponent|
-| [Triggered]-------------->------>                             |
-|                           |     +-----------------------------+
-+---------------------------+                   |
-                                                |
-                                                v
-                                      +-----------------+
-                                      |                 |
-                                      |   Interact()    |
-                                      |                 |
-                                      +-----------------+
-```
-
 ---
 
-## 4. Tutorial: The "3 Apples" Quest
+## 4. Tutorial: The Multi-NPC "3 Apples" Quest
 
-This example will walk you through creating a simple quest where an NPC asks for 3 apples. This will teach you about **Dialogue Events** and **Facts**.
+This advanced tutorial will walk you through a quest involving two NPCs to demonstrate how dialogue events can create a dynamic, interconnected world. We will also introduce a clear naming convention for your data table rows to keep your project organized.
 
-*   **Events**: Actions that happen when a player makes a choice (e.g., `AcceptQuest`).
-*   **Facts**: Pieces of information about the world state (e.g., `PlayerHasApple`).
+**The Scenario:**
+*   **NPC1 (Quest Giver)** asks the Player to find 3 apples.
+*   **NPC2 (Hinter)** knows where the last apple is, but will only give a hint if the quest is active. Otherwise, he'll just say hello.
 
-### 4.1: Create the Data Tables
+### 4.1: Naming Convention
 
-First, we need to create the Data Tables that will hold our dialogue and logic. In your Content Browser, right-click and create three **Data Tables**.
+To keep data tables clean, we recommend the following prefixes:
 
-1.  **`DT_DialogueLines`**:
-    *   **Row Struct**: `DialogueData`
-    *   This table holds every line of dialogue an NPC can say.
+| Type | Prefix | Example |
+| :--- | :--- | :--- |
+| **Dialogue Line** | `D_` | `D_NPC1_StartQuest` |
+| **Player Choice** | `C_` | `C_AcceptQuest` |
+| **Event** | `E_` | `E_AcceptQuest` |
+| **State/Fact** | `S_` | `S_AppleQuestAccepted` |
 
-2.  **`DT_PlayerChoices`**:
-    *   **Row Struct**: `PlayerChoice`
-    *   This table holds every choice a player can make.
+### 4.2: Create the Data Tables
 
-3.  **`DT_StateChanges`**:
-    *   **Row Struct**: `DialogueStateChange`
-    *   This is the "rulebook". It tells the system how to change the game state when an **Event** occurs.
+Create three **Data Tables** as before: `DT_DialogueLines`, `DT_PlayerChoices`, and `DT_StateChanges`.
 
-### 4.2: Populate the Data Tables
-
-Now, let's fill in the rows for our apple quest.
+### 4.3: Populate the Data Tables
 
 #### A. `DT_DialogueLines`
 
 | RowName | SpeakerType | DialogueText | PlayerChoices (Array) |
 | :--- | :--- | :--- | :--- |
-| **NPC_Start** | NPC | Can you get me 3 apples? I'd really appreciate it. | 0: `Choice_Accept`<br>1: `Choice_Decline` |
-| **NPC_Acknowledge**| NPC | Great! Let me know when you have them. | |
-| **NPC_InProgress** | NPC | Still looking for those 3 apples? | 0: `Choice_TurnInApples` |
-| **NPC_Thanks** | NPC | You got them all! Thank you so much! | |
+| **D_NPC1_Start** | NPC | Can you get me 3 apples? I'd really appreciate it. | 0: `C_AcceptQuest`<br>1: `C_DeclineQuest` |
+| **D_NPC1_Acknowledge**| NPC | Great! Let me know when you have them. | |
+| **D_NPC1_InProgress** | NPC | Still looking for those 3 apples? | 0: `C_TurnInApples` |
+| **D_NPC1_Thanks** | NPC | You got them all! Thank you so much! | |
+| **D_NPC2_Generic** | NPC | Hello there, nice day for a walk. | |
+| **D_NPC2_Hint** | NPC | Looking for something? I saw a shiny red apple fall off the cart over there. | |
 
 #### B. `DT_PlayerChoices`
 
 | RowName | ChoiceText | NextLineID | Conditions (Array) | Events (Array) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Choice_Accept** | "Sure, I'll get them for you." | `NPC_Acknowledge` | | 0: `AcceptAppleQuest` |
-| **Choice_Decline**| "Sorry, I can't right now." | | | |
-| **Choice_TurnInApples** | "Here are the 3 apples." | `NPC_Thanks` | 0: `PlayerHasApple1`<br>1: `PlayerHasApple2`<br>2: `PlayerHasApple3` | 0: `CompleteAppleQuest` |
+| **C_AcceptQuest** | "Sure, I'll get them for you." | `D_NPC1_Acknowledge` | | 0: `E_AcceptAppleQuest` |
+| **C_DeclineQuest**| "Sorry, I can't right now." | | | |
+| **C_TurnInApples** | "Here are the 3 apples." | `D_NPC1_Thanks` | 0: `S_PlayerHasApple1`<br>1: `S_PlayerHasApple2`<br>2: `S_PlayerHasApple3` | 0: `E_CompleteAppleQuest` |
 
-*   **Key Point**: `Choice_TurnInApples` will ONLY appear if the player has all three "Facts" (`PlayerHasApple1`, `PlayerHasApple2`, `PlayerHasApple3`). Selecting it fires the `CompleteAppleQuest` event.
+*   **Key Point**: `C_TurnInApples` will ONLY appear if the player has all three "Facts".
 
 #### C. `DT_StateChanges`
 
-This table links the **Events** from `DT_PlayerChoices` to actual changes in the game.
+This table is the "brain" of our quest logic.
 
 | RowName | FactsToAdd (Array) | FactsToRemove (Array) | NewConditionalDialogue |
 | :--- | :--- | :--- | :--- |
-| **AcceptAppleQuest** | 0: `PlayerAcceptedAppleQuest` | | **RequiredFacts**: [`PlayerAcceptedAppleQuest`]<br>**StartDialogueLineID**: `NPC_InProgress` |
-| **CompleteAppleQuest** | 0: `PlayerFinishedAppleQuest` | 0: `PlayerAcceptedAppleQuest`<br>1: `PlayerHasApple1`<br>2: `PlayerHasApple2`<br>3: `PlayerHasApple3` | **RequiredFacts**: [`PlayerFinishedAppleQuest`]<br>**StartDialogueLineID**: `NPC_Thanks` |
+| **E_AcceptAppleQuest** | 0: `S_AppleQuestAccepted` | | **RequiredFacts**: [`S_AppleQuestAccepted`]<br>**StartDialogueLineID**: `D_NPC1_InProgress` |
+| **E_CompleteAppleQuest** | 0: `S_AppleQuestCompleted` | 0: `S_AppleQuestAccepted`<br>1: `S_PlayerHasApple1`<br>2: `S_PlayerHasApple2`<br>3: `S_PlayerHasApple3` | **RequiredFacts**: [`S_AppleQuestCompleted`]<br>**StartDialogueLineID**: `D_NPC1_Thanks` |
 
-### 4.3: Configure the NPC
+### 4.4: Configure the NPCs
 
-1.  Go back to your **NPC Blueprint** and select the `Dialogue Component`.
-2.  Find the **Conditional Start Points** property. This array determines which dialogue to start based on the **Facts** the system knows about. The system checks this list from top to bottom and uses the FIRST one that has its conditions met.
-3.  Add an entry to the array for the very beginning of the quest. Since it has no `RequiredFacts`, it will be the default starting point.
+This is where we make the two NPCs aware of the quest state.
+
+#### A. Configure NPC1 (The Quest Giver)
+
+1.  Open the `NPC1` Blueprint and select its `Dialogue Component`.
+2.  In **Conditional Start Points**, add one entry. This is his default state.
     *   **Element 0**:
         *   **RequiredFacts**: (empty)
-        *   **StartDialogueLineID**: `NPC_Start`
+        *   **StartDialogueLineID**: `D_NPC1_Start`
+3.  When the player accepts the quest, the `E_AcceptAppleQuest` event will fire, and our `DT_StateChanges` table will automatically add the next dialogue state (`D_NPC1_InProgress`) to this NPC's component at runtime.
 
-When the player accepts the quest, the `DT_StateChanges` table will automatically add the other conditional start points (`NPC_InProgress` and `NPC_Thanks`) to this NPC's list at runtime!
+#### B. Configure NPC2 (The Hinter)
 
-### 4.4: Create the Apple Blueprint
+1.  Open the `NPC2` Blueprint and select its `Dialogue Component`.
+2.  In **Conditional Start Points**, we will add **two** entries. The system checks these from top-to-bottom (index 0, then 1, etc.), so order matters!
+    *   **Element 0 (Highest Priority)**:
+        *   **RequiredFacts**: [`S_AppleQuestAccepted`]
+        *   **StartDialogueLineID**: `D_NPC2_Hint`
+    *   **Element 1 (Default/Fallback)**:
+        *   **RequiredFacts**: (empty)
+        *   **StartDialogueLineID**: `D_NPC2_Generic`
 
-Now we need an object the player can pick up to get the "Facts".
+> **This is the key to interconnected NPCs!** We are not directly telling NPC2 to change. We are setting a global fact (`S_AppleQuestAccepted`), and NPC2 has been configured to react to it. When the player talks to NPC2, the system will first check if `S_AppleQuestAccepted` is true. If it is, he'll give the hint. If not, it moves to the next entry and uses the generic dialogue.
 
-1.  Create a new **Blueprint Actor** called `BP_Apple`.
-2.  Add a `StaticMeshComponent` and assign an apple mesh.
-3.  Add a `BoxCollision` component to detect the player.
-4.  In the Event Graph, create a new **Name** variable called `FactToAdd`. Make it **Instance Editable**.
-5.  Create the logic to give the player the fact when they overlap the collision box.
+### 4.5: Create the Apple Blueprint
 
-The Blueprint graph for this is simple:
-<img width="1096" height="778" alt="{45F073A8-6733-4C77-B1E7-980AB52B3722}" src="https://github.com/user-attachments/assets/9d88c9d9-c6ba-4ad0-9fb5-469ed8922c8c" />
+This is the same as before, just with the new Fact naming convention. Create a `BP_Apple` actor that, when collected, adds a `Fact` to the `DialogueStateSubsystem`.
 
-```ascii
-+-----------------------------+
-| (Event) OnActorBeginOverlap |
-| (Actor)---------------------+
-+-----------------------------+
-         |
-         v
-+-----------------------------+
-| Cast To YourPlayerCharacter |
-+-----------------------------+
-         | (Success)
-         v
-+-----------------------------+     +--------------------------------+
-| Get Game Instance           |-----> Get Subsystem (Dialogue State) |
-+-----------------------------+     +--------------------------------+
-                                                  |
-                                                  v
-                                      +-----------------------------+
-                                      | Add Fact                    |
-                                      | (Fact) <----[Get FactToAdd] |
-                                      +-----------------------------+
-                                                  |
-                                                  v
-                                      +-----------------------------+
-                                      | DestroyActor (Self)         |
-                                      +-----------------------------+
-```
-FactsToAdd is just variable
-<img width="722" height="603" alt="{55537202-5FFD-4262-B92A-217ABA970E54}" src="https://github.com/user-attachments/assets/02af7de4-2df5-4553-b62c-d539d1e8929b" />
+1.  Create a `BP_Apple` actor.
+2.  Add a **Name** variable called `FactToAdd`, and make it **Instance Editable**.
+3.  On `BeginOverlap` with the player, get the `DialogueStateSubsystem` and call `Add Fact`, passing in the `FactToAdd` variable. Then destroy the actor.
+4.  Place three apples in your level. Set their `FactToAdd` names to `S_PlayerHasApple1`, `S_PlayerHasApple2`, and `S_PlayerHasApple3`.
 
+### 4.6: You're Done!
 
-6.  Place three `BP_Apple` actors in your level. For each one, select it and go to the **Details** panel. Set the `Fact To Add` variable to `PlayerHasApple1`, `PlayerHasApple2`, and `PlayerHasApple3` respectively.
-
-### 4.5: You're Done!
-
-That's it! Now you can test the full flow:
-1.  Talk to the NPC. They will say the `NPC_Start` line.
-2.  Choose "Sure, I'll get them for you." The `AcceptAppleQuest` event fires. The `DT_StateChanges` table adds the `PlayerAcceptedAppleQuest` fact and tells the NPC that if the player comes back, they should now start with the `NPC_InProgress` dialogue.
-3.  Collect the three apples in the world. Each one adds its unique fact.
-4.  Return to the NPC. The system sees `PlayerAcceptedAppleQuest` is true, so dialogue starts at `NPC_InProgress`. The choice to turn in the apples now appears because you have all three apple facts.
-5.  Select "Here are the 3 apples." The `CompleteAppleQuest` event fires, cleaning up the old facts and giving the NPC a new "thank you" state for all future conversations.
-
-This example shows how you can build complex, stateful quests by simply defining rules in Data Tables.
+Now you can test the full, dynamic flow:
+1.  Talk to **NPC2**. He will say his generic line (`D_NPC2_Generic`).
+2.  Talk to **NPC1**. He will offer the quest (`D_NPC1_Start`).
+3.  Accept the quest. The `E_AcceptAppleQuest` event fires, adding the `S_AppleQuestAccepted` fact to the world.
+4.  Talk to **NPC2** again. Now that `S_AppleQuestAccepted` is true, he will give the hint about the apple near the cart (`D_NPC2_Hint`).
+5.  Collect all three apples.
+6.  Return to **NPC1**. He will see the `S_AppleQuestAccepted` fact and use the `D_NPC1_InProgress` dialogue, allowing you to turn in the apples.
+7.  Completing the quest fires `E_CompleteAppleQuest`, which cleans up the old facts and gives NPC1 his final "thank you" dialogue state.
 
