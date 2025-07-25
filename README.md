@@ -1,7 +1,7 @@
 # DTDialogueSystem
 A Easiest Dialogue system for Unreal Engine which uses Data Tables (@ajinkyax)
 
-HOW TO VIDEO: https://www.youtube.com/watch?v=66Xw8L9fs6M
+HOW TO VIDEO: [https://www.youtube.com/watch?v=66Xw8L9fs6M](https://youtu.be/Efqme7inalk)
 
 # DTDialogueSystem Plugin Documentation
 
