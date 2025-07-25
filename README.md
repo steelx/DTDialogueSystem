@@ -16,7 +16,7 @@ The core philosophy is to manage complex conversations, state changes, and gamep
 - **Event-Based:** Use dialogue choices to fire named events, which can be used to trigger anything in your game (e.g., update a quest, open a door, give an item).
 - **Stateful Conversations:** NPCs can remember past conversations and change their dialogue based on world state or player actions (we call these "Facts").
 - **Blueprint & C++:** Easy to use in Blueprints, with full C++ source for extension.
-- **Built-in Highlighting:** A simple component to make your NPCs glow or show an outline when they are interactable.
+- **Decoupled Interaction:** The plugin does not handle player interaction (like tracing for NPCs), making it compatible with any interaction system you build.
 
 ---
 
@@ -27,26 +27,37 @@ The system is built around a few key components that you add to your character B
 | Component | Who gets it? | Purpose |
 | :--- | :--- | :--- |
 | **DialogueComponent** | Player & NPC | The "brain" of the system. It holds dialogue data and broadcasts/receives dialogue events. |
-| **InitiateDialogueComponent** | Player | Traces for nearby NPCs and allows the player to start a conversation by calling the `Interact()` function. |
-| **HighlightableComponent** | NPC | (Optional & If you add `ShowDialoguePromptComponent` it gets added automatically) Makes the NPC's mesh glow or show an outline when the player is nearby. |
-| **ShowDialoguePromptComponent**| NPC | (Optional) Works with the `HighlightableComponent` to show a tooltip widget (e.g., "Press E to Talk") above the NPC's head. |
+| **InitiateDialogueComponent** | Player | Provides the `TryStartDialogueWith` function. It is called by your own interaction system to begin a conversation with a specific target actor. |
+| **ShowDialoguePromptComponent**| NPC | (Optional) A component to show a tooltip widget (e.g., "Press E to Talk") above the NPC's head. You control when to show/hide it. |
 
 ### How a Conversation Starts:
 
-Here is the typical flow of an interaction:
+The dialogue plugin is now decoupled from the interaction system. Your game is responsible for finding an interactable actor. Once you have a target, you use the `InitiateDialogueComponent` to start the conversation.
+
+Here is the new, recommended flow:
 
 ```ascii
 +--------------------------+                   +--------------------------+
 |      PLAYER              |                   |      NPC                 |
 |--------------------------|                   |--------------------------|
 |                          |                   |                          |
-| InitiateDialogueComponent|---(1. Trace)--->  | HighlightableComponent   |
-|                          |                   | (Shows highlight/prompt) |
+|  YourInteractionComponent|---(1. Trace)--->  | (Any Actor with a        |
+|  (Finds a target actor)  |                   |  DialogueComponent)      |
 |                          |                   |                          |
 |      (Player Presses E)  |                   |                          |
 |                          |                   |                          |
-| Interact() is called!    |---(2. Interact)---> | DialogueComponent        |
-|                          |                   | (Starts Dialogue)        |
+| PrimaryInteract() called!|                   |                          |
+|           |              |                   |                          |
++-----------|--------------+                   +--------------------------+
+            |
+            v
++--------------------------+
+| InitiateDialogueComponent|
+|--------------------------|
+|                          |
+| TryStartDialogueWith()   |---(2. Start)--->  | DialogueComponent        |
+|      (called with        |                   | (on the traced NPC)      |
+|       traced NPC)        |                   |                          |
 +--------------------------+                   +--------------------------+
          |                                                ^
          |                                                |
@@ -59,9 +70,9 @@ Here is the typical flow of an interaction:
                          +-----------------------+
 ```
 
-1.  The **Player's** `InitiateDialogueComponent` constantly looks for actors with a `DialogueComponent`. When it finds one, it tells the **NPC's** `HighlightableComponent` to turn on.
-2.  The Player presses the "Interact" key (e.g., 'E'), which calls the `Interact()` function on their `InitiateDialogueComponent`.
-3.  This starts the dialogue with the focused NPC, using the global `DialogueManager` to display the UI and handle the conversation flow.
+1.  **Your Code Traces:** Your game's own interaction component (e.g., one you create in C++ or Blueprints) performs a trace to find a "focused" actor.
+2.  **Your Code Initiates:** When the player presses the interact key, your code calls the `TryStartDialogueWith` function on the player's `InitiateDialogueComponent`, passing in the actor you found.
+3.  **Dialogue Manager Takes Over:** If the target is a valid dialogue participant, the `DialogueManager` starts the conversation and displays the UI.
 
 > **Important Note:** A common question is: If an event fires, how does the system know which NPC to update? The `DialogueManager` tracks the participants of the **active** conversation. When an event is handled, it targets the NPC involved in that specific dialogue session, ensuring other NPCs in the world are not accidentally affected.
 
@@ -73,39 +84,59 @@ Here’s how to get your characters ready for dialogue.
 
 ### 3.1. NPC Setup
 
-Any character that can talk needs a few components.
+Any character that can talk needs a `DialogueComponent`.
 
 1.  **Open your NPC's Blueprint.**
-2.  **Add Components**: Click the `+ Add` button in the Components panel and add the following:
-    *   `Dialogue Component`
-    *   `Highlightable Component`
-    *   `Show Dialogue Prompt Component`
+2.  **Add Component**: Click the `+ Add` button and add a `Dialogue Component`.
+3.  **Configure the `Dialogue Component`**:
+    *   **Participant Name**: Give the NPC a unique name (e.g., `NPC1` or `Hinter`).
+    *   **Conditional Start Points**: This is where you'll define what dialogue the NPC starts with. We'll cover this in the example below.
+4.  **(Optional) Add a `ShowDialoguePromptComponent`** if you want to display a widget above the NPC's head. You are responsible for calling `ShowPrompt()` and `HidePrompt()` from your own interaction code when the NPC gains or loses focus.
 
-3.  **Configure the Components**:
-    *   **Select the `Dialogue Component`**:
-        *   **Participant Name**: Give the NPC a unique name (e.g., `NPC1` or `Hinter`).
-        *   **Conditional Start Points**: This is where you'll define what dialogue the NPC starts with. We'll cover this in the example below.
-    *   **Select the `Highlightable Component`**:
-        *   **Outline Material / Glow Material**: Assign the `M_Outline` and `M_Glow` materials provided with the plugin. This controls how the NPC looks when highlighted.
-    *   **Select the `Show Dialogue Prompt Component`**:
-        *   **Tooltip Widget Class**: Assign a widget to show above the NPC's head, like the provided `WBP_MyTooltipWidget`.
+### 3.2. Player Setup (Recommended Pattern)
 
-### 3.2. Player Setup
+The player character needs a `DialogueComponent` (to handle events) and an `InitiateDialogueComponent` (to start conversations). The most flexible way to handle interaction is to use a Blueprint Interface.
 
-The player character needs two components to initiate conversations.
+#### Step 1: Create an Interact Interface
+
+1.  In the Content Browser, go to `Add > Blueprints > Blueprint Interface`.
+2.  Name it `BPI_Interact`.
+3.  Open it and create a new function named `Interact`. Give it one input: an `Actor` reference named `Instigator`.
+
+#### Step 2: Add the Interface to your NPC
+
+1.  Open your NPC Blueprint.
+2.  Go to `Class Settings` and under the `Interfaces` panel, click `Add` and select your `BPI_Interact` interface.
+3.  This will add an "Event Interact" node to your Event Graph.
+
+#### Step 3: Configure the Player Character
 
 1.  **Open your Player's Blueprint.**
 2.  **Add Components**: Click `+ Add` and add:
-    *   `Dialogue Component` (This is so the player can receive events, like "QuestUpdated").
+    *   `Dialogue Component`
     *   `Initiate Dialogue Component`
-> Initial Dialogue Component;s : Dialogue Trace Channel : <Must be set to what NPC is using>
-<img width="1742" height="1051" alt="{F43BB428-F6CF-4C83-8F54-E9FE7E8010CC}" src="https://github.com/user-attachments/assets/aaa12ec6-ecbc-4f09-bc97-8a0bdf3d4dd7" />
+3.  **Build the Interaction Logic**:
+    *   Create your own tracing and interaction logic. For example, in your Player Character's `Tick` event, you could do a line trace from the camera to find an actor.
+    *   When the player presses the "Interact" key, get the actor you found from your trace.
+    *   Call the `Interact` message on that actor, passing in a reference to the Player Character (`Self`).
 
-3.  **Configure Input**:
-    *   Go to the **Event Graph** of your Player Blueprint.
-    *   Right-click and add your "Interact" input event (e.g., `EnhancedInputAction IA_Interact` or the standard `Keyboard E`).
-    *   Drag a reference to the `Initiate Dialogue Component` onto the graph.
-    *   From the component reference, drag a wire and call the `Interact` function.
+    *(This part is up to your game's design. The key is that your code finds a target and sends a message).*
+
+#### Step 4: Implement the NPC's `Event Interact`
+
+This is where the magic happens. The NPC decides what "interact" means.
+
+1.  **Open your NPC's Event Graph.**
+2.  Find the **`Event Interact`** node.
+3.  From the `Instigator` pin (this is the Player), drag out a wire and use **`Get Component by Class`**, selecting `InitiateDialogueComponent`.
+4.  From the component reference, call **`Try Start Dialogue With`**.
+5.  For the `Target Actor` pin, plug in a reference to **`Self`**.
+
+This setup is extremely powerful. Your player code doesn't know about dialogue, it just "interacts." The NPC decides that interacting with it should start a conversation.
+
+**Example NPC `Event Interact` Graph:**
+<img width="1844" height="1002" alt="NPC_BP_start-dialogue" src="https://github.com/user-attachments/assets/68c37cf2-6514-4f59-8950-2447d605916c" />
+
 
 ---
 
