@@ -137,6 +137,45 @@ This setup is extremely powerful. Your player code doesn't know about dialogue, 
 **Example NPC `Event Interact` Graph:**
 <img width="1844" height="1002" alt="NPC_BP_start-dialogue" src="https://github.com/user-attachments/assets/68c37cf2-6514-4f59-8950-2447d605916c" />
 
+```
++-----------------+
+| Event Interact  |
+|   (Interface)   |
+|                 |
+|    Instigator o----+
+|                 |    |
+|      (Exec) o--------+--------------------------------+
++-----------------+    |                                |
+                       |                                |
+                       v                                |
+           +------------------------+                   |
+           | Get Component by Class |                   |
+           |------------------------|                   |
+           | Target (Actor) o<------+                   |
+           |                        |                   |
+           | Class:                 |                   |
+           | InitiateDialogueComp   |                   |
+           |                        |                   |
+           |    Return Value o------+-----------------+ |
+           |                        |                 | |
+           |          (Exec) o----------------------+ | |
+           +------------------------+                | | |
+                                                     | | |
+                                                     | v v
+                               +---------------------+ |
+                               | Try Start Dialogue With |
+                               |-------------------------|
+                               | Target (Component) o<---+
+                               |                         |
+                               |      Target Actor o<--+
+                               +---------------------+  |
+                                                      |
+                                          +-----------+
+                                          |
+                                     +----------+
+                                     |   Self   |
+                                     +----------+
+```
 
 ---
 
