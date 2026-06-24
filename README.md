@@ -1,6 +1,8 @@
 # 💬 DTDialogueSystem - Quick Start Guide
 
 Welcome to DTDialogueSystem, a robust, data-driven, and highly scalable dialogue plugin for Unreal Engine 5. This system utilizes native FGameplayTag architecture for memory-safe state tracking and branching narratives.
+[![Watch the video](https://www.youtube.com/watch?v=aPGQqGVAPp8)](https://www.youtube.com/watch?v=aPGQqGVAPp8)
+
 
 Follow this guide to get your first conversation running in minutes.
 
