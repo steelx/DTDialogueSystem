@@ -1,8 +1,7 @@
 # 💬 DTDialogueSystem - Quick Start Guide
 
 Welcome to DTDialogueSystem, a robust, data-driven, and highly scalable dialogue plugin for Unreal Engine 5. This system utilizes native FGameplayTag architecture for memory-safe state tracking and branching narratives.
-[![Watch the video](https://www.youtube.com/watch?v=aPGQqGVAPp8)](https://www.youtube.com/watch?v=aPGQqGVAPp8)
-
+[![DEMO](https://img.youtube.com/vi/aPGQqGVAPp8/0.jpg)](https://www.youtube.com/watch?v=aPGQqGVAPp8)
 
 Follow this guide to get your first conversation running in minutes.
 
@@ -86,6 +85,7 @@ Starting a conversation is as simple as calling a single node.
 > The system will automatically pause game input, slide your UI onto the screen, and begin the typewriter effect!
 
 ### 📡 Bonus: Listening to Dialogue Events
+[![TUTORIAL](https://img.youtube.com/vi/NyLMJJgyvSk/0.jpg)](https://www.youtube.com/watch?v=NyLMJJgyvSk)
 
 When a player makes a choice that fires an Event Tag (e.g., State.Quest.Completed), you can easily listen for this globally to update your game world, grant XP, or give items.
 <img width="1587" height="755" alt="image" src="https://github.com/user-attachments/assets/8ad04517-47e7-45bc-b3e6-303dbba4db69" />
@@ -98,6 +98,8 @@ When a player makes a choice that fires an Event Tag (e.g., State.Quest.Complete
     Create a Custom Event.
 
     Use a Matches Tag node on the output EventTag to check if it matches the specific event you are waiting for.
+<img width="2244" height="1191" alt="tag-match-all" src="https://github.com/user-attachments/assets/ada6df63-b09e-4c03-ad05-15c6c24f1afc" />
+
 
 ### 🐛 Debugging
 
